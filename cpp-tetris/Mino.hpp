@@ -14,8 +14,8 @@ struct IMinoData
 class Mino : public IMino
 {
 public:
-    Mino(const IMinoData& data, index_type positionY, index_type positionX, Direction dir = Direction::NORTH)
-        : data(data), positionY(positionY), positionX(positionX), dir(dir) {}
+    Mino(const IMinoData& data_, index_type positionY_, index_type positionX_, Direction dir_ = Direction::NORTH)
+        : data(data_), positionY(positionY_), positionX(positionX_), dir(dir_) {}
 
     bool operator()(index_type y, index_type x) const override
     {
@@ -41,6 +41,7 @@ public:
             case Command::ROTATE_LEFT:  return rotate_left(geo);
             case Command::HARD_DROP:    return hard_drop(geo);
         }
+        std::unreachable();
     }
 
     bool colliding(const IGeometry& geo) const override

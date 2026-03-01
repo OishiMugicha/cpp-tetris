@@ -1,6 +1,7 @@
 #pragma once
 
 #include <iostream>
+#include <utility>
 #include "TetrisInterface.hpp"
 
 class TetrisView
@@ -31,6 +32,7 @@ public:
             case Cell::J: return 'J';
             case Cell::B: return 'B';
         }
+        std::unreachable();
     }
 
 private:

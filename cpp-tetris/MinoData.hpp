@@ -18,7 +18,7 @@ struct MinoDataStruct
 class MinoData : public IMinoData
 {
 public:
-    MinoData(const MinoDataStruct& data) : data(data) {}
+    MinoData(const MinoDataStruct& data_) : data(data_) {}
 
     bool operator()(Direction dir, index_type y, index_type x) const override
     {

@@ -13,7 +13,7 @@ struct Cell
     };
 
     Cell() noexcept : value() {}
-    Cell(CellEnum value) noexcept : value{value} {}
+    Cell(CellEnum value_) noexcept : value{value_} {}
 
     operator CellEnum() const noexcept
     {

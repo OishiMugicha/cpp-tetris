@@ -14,7 +14,7 @@ struct MinoType
     static const int MAX = 7;
 
     MinoType() noexcept : value() {}
-    MinoType(MinoTypeEnum value) noexcept : value(value) {}
+    MinoType(MinoTypeEnum value_) noexcept : value(value_) {}
 
     operator MinoTypeEnum() const noexcept
     {
@@ -32,6 +32,7 @@ struct MinoType
             case L: return Cell::L;
             case J: return Cell::J;
         }
+        std::unreachable();
     }
 
     MinoTypeEnum value;
@@ -44,7 +45,7 @@ struct Direction
         NORTH, EAST, SOUTH, WEST
     };
 
-    Direction(DirectionEnum value) : value(value) {}
+    Direction(DirectionEnum value_) : value(value_) {}
 
     operator DirectionEnum() const noexcept
     {
@@ -95,8 +96,8 @@ struct IMinoFactory
 class Tetris : public ITetris
 {
 public:
-    Tetris(std::unique_ptr<IGeometry>&& geo, std::unique_ptr<IMinoFactory>&& factory)
-        : geo(std::move(geo)), factory(std::move(factory)), mino(), in_game_flag(), seed_gen(), engine(seed_gen())
+    Tetris(std::unique_ptr<IGeometry>&& geo_, std::unique_ptr<IMinoFactory>&& factory_)
+        : geo(std::move(geo_)), factory(std::move(factory_)), mino(), in_game_flag(), seed_gen(), engine(seed_gen())
     {
         if(!(this->geo && this->factory)) throw std::exception();
     }

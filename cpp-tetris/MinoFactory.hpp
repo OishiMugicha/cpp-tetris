@@ -11,7 +11,7 @@ struct IMinoDataContainer
 class MinoFactory : public IMinoFactory
 {
 public:
-    MinoFactory(const IMinoDataContainer& dataContainer) : dataContainer(dataContainer) {}
+    MinoFactory(const IMinoDataContainer& dataContainer_) : dataContainer(dataContainer_) {}
 
     std::unique_ptr<IMino> create(MinoType type, index_type positionY, index_type positionX) const override
     {
