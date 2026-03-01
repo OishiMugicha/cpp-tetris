@@ -1,150 +1,114 @@
-#include <iostream>
 #include <windows.h>
 #include "Presenter.hpp"
+#include "TetrisInterface.hpp"
 
-void display(const auto& tetris)
-{
-    for(index_type y = 0; y < MATRIX_HEIGHT; ++y){
-        for(index_type x = 0; x < MATRIX_WIDTH; ++x){
-            std::cout << tetris(y, x);
-        }
-        std::cout << '\n';
-    }
-}
-
-HANDLE hStdin;
-DWORD fdwSaveOldMode;
-
-VOID ErrorExit(LPCSTR);
-VOID KeyEventProc(KEY_EVENT_RECORD);
+constexpr int CELL_SIZE = 20;
+constexpr int GRID_WIDTH  = MATRIX_WIDTH  * CELL_SIZE;
+constexpr int GRID_HEIGHT = MATRIX_HEIGHT * CELL_SIZE;
 
 Presenter presenter;
 TetrisView tetris_view = presenter.make_view();
 
-int main()
+static HBRUSH hBrushes[9];
+
+void draw_grid(HDC hdc)
 {
-    INPUT_RECORD irInBuf[128];
-
-    // Get the standard input handle.
-
-    hStdin = GetStdHandle(STD_INPUT_HANDLE);
-    if (hStdin == INVALID_HANDLE_VALUE)
-        ErrorExit("GetStdHandle");
-
-    // Save the current input mode, to be restored on exit.
-
-    if (! GetConsoleMode(hStdin, &fdwSaveOldMode) )
-        ErrorExit("GetConsoleMode");
-
-    // Enable the window and mouse input events.
-
-    DWORD fdwMode = ENABLE_WINDOW_INPUT | ENABLE_MOUSE_INPUT;
-    if (! SetConsoleMode(hStdin, fdwMode) )
-        ErrorExit("SetConsoleMode");
-
-    // Loop to read and handle the next 100 input events.
-
-    tetris_view.start();
-
-    int counter = 0;
-
-    while (counter++ <= 100)
-    {
-        // Wait for the events.
-
-        DWORD cNumRead;
-
-        if (! ReadConsoleInput(
-                hStdin,      // input buffer handle
-                irInBuf,     // buffer to read into
-                128,         // size of read buffer
-                &cNumRead) ) // number of records read
-            ErrorExit("ReadConsoleInput");
-
-        // Dispatch the events to the appropriate handler.
-
-        for (DWORD i = 0; i < cNumRead; ++i)
-        {
-            std::system("cls");
-
-            switch(irInBuf[i].EventType)
-            {
-                case KEY_EVENT: // keyboard input
-                    KeyEventProc(irInBuf[i].Event.KeyEvent);
-                    break;
-
-                case FOCUS_EVENT:  // disregard focus events
-
-                case MENU_EVENT:   // disregard menu events
-                    break;
-
-                default:
-                    ErrorExit("Unknown event type");
-                    break;
-            }
-
-            display(tetris_view);
+    RECT rc;
+    for(index_type y = 0; y < MATRIX_HEIGHT; ++y){
+        for(index_type x = 0; x < MATRIX_WIDTH; ++x){
+            Cell c = tetris_view(y, x);
+            int idx = static_cast<int>(c);
+            rc.left   = x * CELL_SIZE;
+            rc.top    = y * CELL_SIZE;
+            rc.right  = rc.left + CELL_SIZE;
+            rc.bottom = rc.top + CELL_SIZE;
+            FillRect(hdc, &rc, hBrushes[idx]);
+            FrameRect(hdc, &rc, (HBRUSH)GetStockObject(BLACK_BRUSH));
         }
     }
-
-    // Restore input mode on exit.
-
-    SetConsoleMode(hStdin, fdwSaveOldMode);
-
-    return 0;
 }
 
-VOID ErrorExit (LPCSTR lpszMessage)
+LRESULT CALLBACK WndProc(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lParam)
 {
-    fprintf(stderr, "%s\n", lpszMessage);
-
-    // Restore input mode on exit.
-
-    SetConsoleMode(hStdin, fdwSaveOldMode);
-
-    ExitProcess(0);
-}
-
-VOID KeyEventProc(KEY_EVENT_RECORD ker)
-{
-    static WORD previous_key;
-    static bool previous_pushed;
-
-    switch(ker.wVirtualKeyCode){
-        case VK_LEFT:
-            if(!previous_pushed || previous_key != VK_LEFT) tetris_view.proc(Command::MOVE_LEFT);
-            previous_key = VK_LEFT;
-            std::cout << "Left key pressed\n";
-            break;
-        case VK_RIGHT:
-            if(!previous_pushed || previous_key != VK_RIGHT) tetris_view.proc(Command::MOVE_RIGHT);
-            previous_key = VK_RIGHT;
-            std::cout << "Right key pressed\n";
-            break;
-        case VK_CONTROL:
-            if(!previous_pushed || previous_key != VK_RIGHT) tetris_view.proc(Command::ROTATE_LEFT);
-            previous_key = VK_CONTROL;
-            std::cout << "Ctrl key pressed\n";
-            break;
-        case VK_UP:
-            if(!previous_pushed || previous_key != VK_UP) tetris_view.proc(Command::ROTATE_RIGHT);
-            previous_key = VK_UP;
-            std::cout << "Up key pressed\n";
-            break;
-        case VK_DOWN:
-            if(!previous_pushed || previous_key != VK_DOWN) tetris_view.proc(Command::MOVE_DOWN);
-            previous_key = VK_DOWN;
-            std::cout << "Down key pressed\n";
-            break;
-        case VK_SPACE:
-            if(!previous_pushed || previous_key != VK_SPACE) tetris_view.proc(Command::HARD_DROP);
-            previous_key = VK_SPACE;
-            std::cout << "Space key pressed\n";
-            break;
-        default:
-            std::cout << "No key is being pressed\n";
-            break;
+    switch(msg)
+    {
+    case WM_CREATE:
+        hBrushes[0] = CreateSolidBrush(RGB(255,255,255)); // EMPTY white
+        hBrushes[1] = CreateSolidBrush(RGB(0,255,255));   // I cyan
+        hBrushes[2] = CreateSolidBrush(RGB(255,255,0));   // O yellow
+        hBrushes[3] = CreateSolidBrush(RGB(128,0,128));   // T purple
+        hBrushes[4] = CreateSolidBrush(RGB(0,255,0));     // S green
+        hBrushes[5] = CreateSolidBrush(RGB(255,0,0));     // Z red
+        hBrushes[6] = CreateSolidBrush(RGB(255,165,0));   // L orange
+        hBrushes[7] = CreateSolidBrush(RGB(0,0,255));     // J blue
+        hBrushes[8] = CreateSolidBrush(RGB(192,192,192)); // B gray
+        tetris_view.start();
+        SetTimer(hwnd, 1, 500, nullptr);
+        return 0;
+    case WM_TIMER:
+        if(wParam == 1){
+            tetris_view.proc(Command::MOVE_DOWN);
+            InvalidateRect(hwnd, nullptr, TRUE);
+        }
+        return 0;
+    case WM_KEYDOWN:
+        switch(wParam)
+        {
+        case VK_LEFT:  tetris_view.proc(Command::MOVE_LEFT);  break;
+        case VK_RIGHT: tetris_view.proc(Command::MOVE_RIGHT); break;
+        case VK_UP:    tetris_view.proc(Command::ROTATE_RIGHT); break;
+        case VK_DOWN:  tetris_view.proc(Command::MOVE_DOWN); break;
+        case VK_SPACE: tetris_view.proc(Command::HARD_DROP); break;
+        case VK_CONTROL: tetris_view.proc(Command::ROTATE_LEFT); break;
+        default: break;
+        }
+        InvalidateRect(hwnd, nullptr, TRUE);
+        return 0;
+    case WM_PAINT:
+    {
+        PAINTSTRUCT ps;
+        HDC hdc = BeginPaint(hwnd, &ps);
+        draw_grid(hdc);
+        EndPaint(hwnd, &ps);
+        return 0;
+    }
+    case WM_DESTROY:
+        for(int i = 0; i < 9; ++i){
+            if(hBrushes[i]) DeleteObject(hBrushes[i]);
+        }
+        PostQuitMessage(0);
+        return 0;
     }
 
-    previous_pushed = ker.bKeyDown;
+    return DefWindowProc(hwnd, msg, wParam, lParam);
+}
+
+int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE, LPSTR, int nCmdShow)
+{
+    WNDCLASSA wc = {};
+    wc.lpfnWndProc = WndProc;
+    wc.hInstance = hInstance;
+    wc.lpszClassName = "TetrisClass";
+
+    RegisterClassA(&wc);
+
+    RECT wr = {0,0, GRID_WIDTH, GRID_HEIGHT};
+    AdjustWindowRect(&wr, WS_OVERLAPPEDWINDOW & ~WS_THICKFRAME, FALSE);
+
+    HWND hwnd = CreateWindowA(
+        "TetrisClass", "Tetris",
+        WS_OVERLAPPEDWINDOW & ~WS_THICKFRAME,
+        CW_USEDEFAULT, CW_USEDEFAULT,
+        wr.right - wr.left, wr.bottom - wr.top,
+        nullptr, nullptr, hInstance, nullptr);
+
+    if(!hwnd) return 0;
+    ShowWindow(hwnd, nCmdShow);
+
+    MSG msg;
+    while(GetMessage(&msg, nullptr, 0, 0)){
+        TranslateMessage(&msg);
+        DispatchMessage(&msg);
+    }
+    return (int)msg.wParam;
 }

@@ -25,8 +25,8 @@ struct Cell
 
 using index_type = int;
 
-const index_type MATRIX_HEIGHT = 10;
-const index_type MATRIX_WIDTH  = 10;
+inline constexpr index_type MATRIX_HEIGHT = 10;
+inline constexpr index_type MATRIX_WIDTH  = 10;
 
 struct ITetris
 {
